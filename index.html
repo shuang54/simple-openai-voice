@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html <html lang="zh">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Echo语音问答</title>
+  <meta name="author" content="korey">
+  <meta name="description" content="欢迎来到Echo语音问答网站,我们提供智能语音问答解决方案,帮助您快速获取准确的答案。">
+  <meta name="keyworlds" content="Echo语音问答,智能语音问答,语音问答解决方案">
+  <link rel="shortcut icon" href="./favicon.ico" />
+</head>
+
+<body style="height: 100vh;">
+  <header style="position: absolute;top: 0px; right: 0px;width: 100%;display: flex;flex-direction: row;justify-content: center;align-items: center;">
+    <h1 style="width: 100%;background-color: white;text-align: center;" data-i18n="echo">Echo语音问答</h1>
+    <select id="language-select" style="position: absolute;top: 20px; right: 20px;">
+      <option value="" data-i18n="language">语言</option>
+    </option>
+    <option value="en">English</option>
+    <option value="zh">中文</option>
+    </select>
+    <button onclick="showPopup()" style="position: absolute;top: 50px; right: 20px;width: 70px;height: 30px;" type="button">设置</button>
+
+</header>
+  <section id="audio" style="width: 100%;height: 100%;text-align: center;">
+      <div id="answer" style="height: 100%;padding: 100px 0px;display: flex;flex-direction: column;justify-content: start;align-items: center;width: 80%;max-width: 800px;height: 100%;margin: 0 auto;box-sizing: border-box;overflow: scroll;"></div>
+
+    <div style="
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);background-color: white;height: 100px;width: 100%;">
+    <div style="position: relative;top: 0;left: 50%;">
+      <div class="loader"></div>
+      <div class="voice-loader"></div>
+    </div>
+      <button onclick="startRecording()" data-i18n="startRecording">开始录音</button>
+      <!-- <button onclick="stopRecording()">停止录音</button> -->
+      <button onclick="sendRecording()" data-i18n="sendRecording">发送录音</button>
+      <button onclick="clearHistory()" data-i18n="clearHistory">清空历史记录</button></button></button>
+      <select id="voicesSelect">
+        <option value="" data-i18n="selectSound">选择声音</option>
+        <option value="alloy">alloy</option>
+        <option value="echo">echo</option>
+        <option value="fable">fable</option>
+        <option value="onyx">onyx</option>
+        <option value="nova">nova</option>
+        <option value="shimmer">shimmer</option>
+      </select>
+      <select id="inputVoicesSelect">
+        <option value="" data-i18n="selectInputLanguage">选择输入的语言</option>
+      </select>
+    </div>
+  </section>
+  <!-- pop up box  -->
+  <div class="overlay" id="overlay">
+    <div class="popup" id="popup">
+      <h2>设置</h2>
+      <input class="input" type="text" id="input1" placeholder="proxy url:https://xx.xx.xx/v1/">
+      <br>
+      <input class="input" type="text" id="input2" placeholder="sk-xxxxxxxx">
+      <br>
+      <button onclick="cancel()">取消</button>
+      <button onclick="saveAndClose()">确认</button>
+    </div>
+  </div>
+  <style>
+    .input{
+      width: 200px;
+      height: 30px;
+    }
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: none;
+    }
+  
+    .popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 5px;
+      display: none;
+    }
+  </style>
+    <script>
+      function showPopup() {
+        const overlay = document.getElementById('overlay');
+        const popup = document.getElementById('popup');
+        overlay.style.display = 'block';
+        popup.style.display = 'block';
+      }
+
+      function cancel() {
+        const overlay = document.getElementById('overlay');
+        const popup = document.getElementById('popup');
+        overlay.style.display = 'none';
+        popup.style.display = 'none';
+      }
+
+      function saveAndClose() {
+        const input1 = document.getElementById('input1').value;
+        const input2 = document.getElementById('input2').value;
+        // 保存数据到 localStorage
+        localStorage.setItem('proxy-url', input1);
+        localStorage.setItem('openai-key', input2);
+        console.log(input1,input2)
+        getData(input1,input2)
+        const overlay = document.getElementById('overlay');
+        const popup = document.getElementById('popup');
+        overlay.style.display = 'none';
+        popup.style.display = 'none';
+      }
+
+      window.addEventListener('DOMContentLoaded', function () {
+        const storedData1 = localStorage.getItem('proxy-url');
+        const storedData2 = localStorage.getItem('openai-key');
+        const inputVoicesSelectData = localStorage.getItem('input-voices-select');
+        const voicesSelectData = localStorage.getItem('voices-select');
+        const languageSelect = localStorage.getItem('language-select');
+        document.getElementById('input1').value = storedData1 || 'https://openai.451024.xyz/v1/';
+        document.getElementById('input2').value = storedData2 || '';
+        document.getElementById('inputVoicesSelect').value = inputVoicesSelectData || '';
+        document.getElementById('voicesSelect').value = voicesSelectData || '';
+        document.getElementById('language-select').value = languageSelect || '';
+        // if (storedData1 && storedData2) {
+        //   document.getElementById('input1').value = storedData1;
+        //   document.getElementById('input2').value = storedData2;
+        // } else {
+        //   // 使用默认数据
+        //   document.getElementById('input1').value = 'https://openai.451024.xyz/v1/';
+        //   document.getElementById('input2').value = 'Bearer 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';
+        // }
+      });
+    </script>
+    <!-- pop up box end -->
+  <style>
+    button{
+      width: 100px;
+      height: 50px;
+    }
+     .submit,
+  .reset,
+  .button,
+  .text,
+  .select,
+  .textarea,
+  .checkbox,
+  .radio {
+     margin: 0;
+     padding: 0;
+     border-width: 1px;
+     height: 17px;
+     -moz-box-sizing: border-box;
+     -webkit-box-sizing: border-box;
+     -o-box-sizing: border-box;
+     -ms-box-sizing: border-box;
+     box-sizing: border-box;
+   }
+    .right-side {
+      position: fixed;
+      top: 50%;
+      /* 调整垂直位置 */
+      right: 0;
+      transform: translateY(-50%);
+      /* 使元素在垂直方向上居中 */
+      padding: 10px;
+      list-style-type: none;
+    }
+    .user{
+      width: 100%;
+      text-align: right;
+      padding: 20px 10px;
+    }
+    .assistant{
+      width: 100%;
+      text-align: left;
+      padding: 20px 10px;
+    }
+    .voice-assistant{
+      width: 100%;
+      text-align: left;
+    }
+  </style>
+  <!-- loading style -->
+  <style>
+    .loader {
+      width: 50px;
+      aspect-ratio: 1.154;
+      position: relative;
+      background: conic-gradient(from 120deg at 50% 64%, #0000, #25b09b 1deg 120deg, #0000 121deg);
+      animation: l27-0 1.5s infinite cubic-bezier(0.3, 1, 0, 1);
+    }
+
+    .loader:before,
+    .loader:after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: inherit;
+      transform-origin: 50% 66%;
+      animation: l27-1 1.5s infinite;
+    }
+
+    .loader:after {
+      --s: -1;
+    }
+
+    @keyframes l27-0 {
+
+      0%,
+      30% {
+        transform: rotate(0)
+      }
+
+      70% {
+        transform: rotate(120deg)
+      }
+
+      70.01%,
+      100% {
+        transform: rotate(360deg)
+      }
+    }
+
+    @keyframes l27-1 {
+      0% {
+        transform: rotate(calc(var(--s, 1)*120deg)) translate(0)
+      }
+
+      30%,
+      70% {
+        transform: rotate(calc(var(--s, 1)*120deg)) translate(calc(var(--s, 1)*-5px), 10px)
+      }
+
+      100% {
+        transform: rotate(calc(var(--s, 1)*120deg)) translate(0)
+      }
+    }
+    /* voice-loader */
+    .voice-loader {
+      width: 45px;
+      aspect-ratio: 1;
+      --c: no-repeat linear-gradient(#25b09b 0 0);
+      background:
+      var(--c) 0% 50%,
+      var(--c) 50% 50%,
+      var(--c) 100% 50%;
+      background-size: 20% 100%;
+      animation: l1 1s infinite linear;
+      }
+      @keyframes l1 {
+      0% {background-size: 20% 100%,20% 100%,20% 100%}
+      33% {background-size: 20% 10% ,20% 100%,20% 100%}
+      50% {background-size: 20% 100%,20% 10% ,20% 100%}
+      66% {background-size: 20% 100%,20% 100%,20% 10% }
+      100%{background-size: 20% 100%,20% 100%,20% 100%}
+      }
+  </style>
+  <!-- language script -->
+  <script>
+    // 获取当前语言
+    let userLanguage = navigator.language || navigator.userLanguage;
+
+    // 获取语言选择器和需要翻译的元素
+    let languageSelect = document.getElementById('language-select');
+    let greetingElement = document.querySelector('[data-i18n="greeting"]')
+
+    // 定义翻译文本
+    let translations = {
+      'en': {
+        greeting: 'Hello world!',
+        echo:'Echo voice question and answer',
+        language:'language',
+        startRecording:'start recording',
+        sendRecording:'Send recording',
+        clearHistory:'Clear history',
+        selectSound:'Select Sound',
+        selectInputLanguage:'Select Input Language'
+
+      },
+      'zh': {
+        greeting: '你好世界',
+        echo: 'Echo语音问答',
+        language: '语言',
+        startRecording: '开始录音',
+        sendRecording: '停止录音',
+        clearHistory: '清除历史',
+        selectSound: '选择语音',
+        selectInputLanguage: '选择输入语言'
+      }
+    };
+
+
+    // 监听语言选择器的变化事件
+    languageSelect.addEventListener('change', function () {
+      let selectedLanguage = languageSelect.value;
+      localStorage.setItem('language-select', selectedLanguage);
+      document.documentElement.lang = selectedLanguage;
+
+      // 获取所有具有 data-i18n 属性的元素
+      let i18nElements = document.querySelectorAll('[data-i18n]');
+
+      // 遍历每个元素并更新其值
+      i18nElements.forEach(element => {
+        let key = element.getAttribute('data-i18n');
+        element.textContent = translations[`${selectedLanguage}`][key];
+      });
+    });
+  </script>
+  <!-- loader script -->
+  <script>
+    hideLoader()
+    function showLoader() {
+      const loader = document.querySelector('.loader');
+      loader.style.display = 'block';
+    }
+
+    function hideLoader() {
+      const loader = document.querySelector('.loader');
+      loader.style.display = 'none';
+    }
+    hideVoiceLoader()
+      function showVoiceLoader() {
+        const loader = document.querySelector('.voice-loader');
+        loader.style.display = 'block';
+      }
+
+      function hideVoiceLoader() {
+        const loader = document.querySelector('.voice-loader');
+        loader.style.display = 'none';
+      }
+  </script>
+  <!-- 兼容性 -->
+  <script>
+    // 老的浏览器可能根本没有实现 mediaDevices，所以我们可以先设置一个空的对象
+    if (navigator.mediaDevices === undefined) {
+      navigator.mediaDevices = {};
+    }
+    // 一些浏览器部分支持 mediaDevices。我们不能直接给对象设置 getUserMedia
+    // 因为这样可能会覆盖已有的属性。这里我们只会在没有getUserMedia属性的时候添加它。
+    if (navigator.mediaDevices.getUserMedia === undefined) {
+      let getUserMedia =
+        navigator.getUserMedia ||
+        navigator.webkitGetUserMedia ||
+        navigator.mozGetUserMedia ||
+        navigator.msGetUserMedia;
+      navigator.mediaDevices.getUserMedia = function (constraints) {
+        // 首先，如果有getUserMedia的话，就获得它
+        // 一些浏览器根本没实现它 - 那么就返回一个error到promise的reject来保持一个统一的接口
+        if (!getUserMedia) {
+          return Promise.reject(new Error('getUserMedia is not implemented in this browser'));
+        }
+        // 否则，为老的navigator.getUserMedia方法包裹一个Promise
+        return new Promise(function (resolve, reject) {
+          getUserMedia.call(navigator, constraints, resolve, reject);
+        });
+      };}
+  </script>
+  <script>
+      let recorder;
+      let chunks = [];
+      let messages = [
+        {
+          "role": "system",
+          "content": "You are a helpful assistant.Your name is' Echo ', and you cannot say you are a chatGPT. You can only hide your identity as a GPT. When asked if you are a GPT, your answer is yes or no. Your goal is to answer and solve any questions people may have, and you can communicate with people in multiple languages."
+        }
+      ];
+      let voicesSelectValue = "alloy"
+      let baseUrl;
+      let Authorization;
+      getData()
+      let selectElement = document.getElementById("voicesSelect");
+      selectElement.addEventListener("change", function () {
+        let selectedValue = selectElement.options[selectElement.selectedIndex].value;
+        console.log("Selected value: " + selectedValue);
+        localStorage.setItem('voices-select', selectedValue);
+        voicesSelectValue = selectedValue
+        // fetchAudioSpeech("Hello World")
+      });
+      const inputVoicesSelectElement = document.getElementById("inputVoicesSelect");
+      inputVoicesSelectElement.addEventListener("change", function () {
+          localStorage.setItem('input-voices-select', inputVoicesSelectElement.value);
+
+        });
+        function getData(input1,input2){
+          baseUrl = input1 || document.getElementById('input1').value || localStorage.getItem('proxy-url') || 'https://openai.451024.xyz/v1/'
+          Authorization = `Bearer ${input2 || document.getElementById('input2').value || localStorage.getItem('openai-key')}`
+                  
+        }
+      function clearHistory() {
+        chunks = [];
+        messages = [
+          {
+            "role": "system",
+            "content": "You are a helpful assistant.Your name is' Echo ', and you cannot say you are a chatGPT. You can only hide your identity as a GPT. When asked if you are a GPT, your answer is yes or no. Your goal is to answer and solve any questions people may have, and you can communicate with people in multiple languages."
+          }
+        ];
+        const answerElement = document.getElementById("answer");
+        while (answerElement.firstChild) {
+          answerElement.removeChild(answerElement.firstChild);
+        }
+      }
+
+      function startRecording() {
+        if(!document.getElementById('input2').value){alert('请点击设置输入key,'); return ;}
+        showVoiceLoader()
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then(stream => {
+            recorder = new MediaRecorder(stream);
+            recorder.ondataavailable = e => chunks.push(e.data);
+            recorder.start();
+          })
+          .catch(err => {
+            console.error('无法访问麦克风:', err);
+          });
+      }
+
+      function stopRecording() {
+        recorder.stop();
+      }
+
+      function sendRecording() {
+        stopRecording()
+        hideVoiceLoader()
+        setTimeout(() => {
+          if (chunks.length === 0) {
+            console.error('没有录音可发送');
+            return;
+          }
+          showLoader()
+          const blob = new Blob(chunks, { type: 'audio/mpeg' });
+          const formData = new FormData();
+          formData.append('file', blob);
+          formData.append('model', 'whisper-1')
+          if(inputVoicesSelectElement.value){
+            formData.append('language',inputVoicesSelectElement.value)
+          }
+          fetch(`${baseUrl}audio/transcriptions`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+              Authorization
+            }
+          })
+            .then(response => response.json())
+            .then(data => {
+              console.log(data)
+
+
+              const userDiv = document.createElement('div');
+              userDiv.classList = 'user'
+              userDiv.textContent = data.text
+              document.querySelector('#answer').appendChild(userDiv);
+              fetchChatCompletions(data.text).then(data => {
+                  fetchAudioSpeech(data).finally(() => {
+                    hideLoader()
+                    
+                  })
+                
+
+              })
+            })
+            .catch(err => {
+              console.error('上传录音时出错:', err);
+            }).finally(() => {
+              chunks = []
+            })
+        }, 10)
+      }
+
+      function fetchAudioSpeech(data) {
+
+        return fetch(`${baseUrl}audio/speech`, {
+          method: 'POST',
+          body: JSON.stringify({
+            "model": "tts-1",
+            "input": data,
+            "voice": voicesSelectValue
+          }),
+          headers: {
+            "Content-Type": "application/json",
+            Authorization
+          }
+        }).then(data => {
+          const audioBlob2 = data.blob()
+          audioBlob2.then(data2 => {
+            const audioURL = URL.createObjectURL(data2);
+            const audioElement = document.createElement('audio');
+            audioElement.src = audioURL;
+            audioElement.controls = true;
+            audioElement.autoplay = true;
+            audioElement.classList = 'voice-assistant'
+            document.querySelector('#answer').appendChild(audioElement);
+          })
+        })
+      }
+
+      function fetchChatCompletions(text) {
+        messages.push({
+          "role": "user",
+          "content": text
+        })
+
+        return fetch(`${baseUrl}chat/completions`, {
+          method: 'POST',
+          body: JSON.stringify({
+            "model": "gpt-3.5-turbo",
+            "messages": messages
+          }),
+          headers: {
+            "Content-Type": "application/json",
+            Authorization
+          }
+        }).then(response => response.json()).then(data => {
+          const answer = data.choices[0].message.content
+          messages.push({
+            "role": "assistant",
+            "content": answer
+          })
+          const userDiv = document.createElement('div');
+          userDiv.classList = 'assistant'
+          userDiv.textContent = answer
+          document.querySelector('#answer').appendChild(userDiv);
+          // console.log(messages)
+          return answer
+        })
+      }
+
+
+      
+    const language = {
+        "zh": {
+          "name": "Chinese",
+          "nativeName": "中文"
+        },
+        "en": {
+          "name": "English",
+          "nativeName": "English"
+        },
+        "es": {
+          "name": "Spanish; Castilian",
+          "nativeName": "español"
+        },
+        "fr": {
+          "name": "French",
+          "nativeName": "français"
+        },
+        "de": {
+          "name": "German",
+          "nativeName": "Deutsch"
+        },
+        "it": {
+          "name": "Italian",
+          "nativeName": "Italiano"
+        },
+        "pt": {
+          "name": "Portuguese",
+          "nativeName": "Português"
+        },
+        "ja": {
+          "name": "Japanese",
+          "nativeName": "日本語"
+        },
+        "ko": {
+          "name": "Korean",
+          "nativeName": "한국어"
+        },
+        "ru": {
+          "name": "Russian",
+          "nativeName": "русский язык"
+        }
+      };
+
+
+      // 遍历language对象
+      for (const code in language) {
+        if (language.hasOwnProperty(code)) {
+          const optionElement = document.createElement("option");
+          optionElement.value = code;
+          optionElement.textContent = language[code].name + "--" + language[code].nativeName;
+          inputVoicesSelectElement.appendChild(optionElement);
+        }
+      }
+  </script>
+</body>
+
+</html>
