@@ -131,14 +131,6 @@
         document.getElementById('inputVoicesSelect').value = inputVoicesSelectData || '';
         document.getElementById('voicesSelect').value = voicesSelectData || '';
         document.getElementById('language-select').value = languageSelect || '';
-        // if (storedData1 && storedData2) {
-        //   document.getElementById('input1').value = storedData1;
-        //   document.getElementById('input2').value = storedData2;
-        // } else {
-        //   // 使用默认数据
-        //   document.getElementById('input1').value = 'https://openai.451024.xyz/v1/';
-        //   document.getElementById('input2').value = 'Bearer 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';
-        // }
       });
     </script>
     <!-- pop up box end -->
@@ -470,6 +462,7 @@
               })
             })
             .catch(err => {
+              hideLoader()
               console.error('上传录音时出错:', err);
             }).finally(() => {
               chunks = []
